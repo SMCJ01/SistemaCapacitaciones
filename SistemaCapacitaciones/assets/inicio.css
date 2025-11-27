@@ -1,0 +1,341 @@
+/* ============================================================
+   AISLAMIENTO DEL ESTILO – SOLO APLICA AL INICIO
+============================================================ */
+#inicio-page {
+    all: unset;
+    display: block !important;
+    font-family: "Poppins", sans-serif !important;
+}
+
+#inicio-page * {
+    box-sizing: border-box !important;
+    font-family: inherit !important;
+}
+
+/* ============================================================
+   NAV FUTURISTA
+============================================================ */
+#inicio-page .nav-futuristic {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    padding: 18px 50px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    backdrop-filter: blur(15px);
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+
+    z-index: 999;
+}
+
+#inicio-page .nav-logo {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+#inicio-page .nav-logo span {
+    color: #7df9ff;
+    font-size: 2rem;
+}
+
+#inicio-page .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+}
+
+#inicio-page .nav-links a {
+    color: #d1d1d1;
+    font-size: 1rem;
+    transition: .3s;
+}
+
+#inicio-page .nav-links a:hover {
+    color: #fff;
+    text-shadow: 0 0 10px #7df9ff;
+}
+
+#inicio-page .btn-login-glow {
+    padding: 8px 18px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid #7df9ff;
+    color: #7df9ff;
+    transition: .3s;
+}
+
+#inicio-page .btn-login-glow:hover {
+    background: #7df9ff;
+    color: #000;
+    box-shadow: 0 0 15px #7df9ff;
+}
+
+#inicio-page .btn-register-glass {
+    padding: 8px 18px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(10px);
+    color: #ffffff;
+    transition: .3s;
+}
+
+#inicio-page .btn-register-glass:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px #fff;
+}
+
+
+/* ============================================================
+   HERO FUTURISTA
+============================================================ */
+#inicio-page .hero-section {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+    background: #0b0f19;
+    overflow: hidden;
+}
+
+/* Fondo animado */
+#inicio-page .hero-bg-animation {
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 30% 40%, rgba(0,150,255,0.3), transparent),
+                radial-gradient(circle at 70% 60%, rgba(255,0,200,0.25), transparent);
+    filter: blur(70px);
+    animation: inicio-bgMove 12s infinite alternate linear;
+    z-index: 1;
+}
+
+@keyframes inicio-bgMove {
+    0% { transform: translate(-20%, -10%) scale(1); }
+    100% { transform: translate(10%, 20%) scale(1.2); }
+}
+
+/* Contenido central */
+#inicio-page .hero-center {
+    position: relative;
+    z-index: 3;
+}
+
+#inicio-page .glow-text {
+    font-size: 3rem;
+    color: #fff;
+    text-shadow: 0 0 12px #7df9ff, 0 0 30px #228dff;
+    animation: inicio-glowPulse 2s infinite alternate ease-in-out;
+}
+
+@keyframes inicio-glowPulse {
+    0% { text-shadow: 0 0 12px #7df9ff; }
+    100% { text-shadow: 0 0 25px #00d0ff; }
+}
+
+#inicio-page .hero-sub {
+    margin-top: 20px;
+    font-size: 1.3rem;
+    color: #e3e3e3;
+}
+
+/* CTA BUTTON */
+#inicio-page .cta-btn-gradient {
+    margin-top: 35px;
+    padding: 12px 30px;
+    font-size: 1.2rem;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #009dff, #bd00ff);
+    box-shadow: 0 0 20px #009dff;
+    transition: .3s;
+    color: #fff;
+}
+
+#inicio-page .cta-btn-gradient:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 30px #bd00ff;
+}
+
+/* Loader elegante */
+#inicio-page .kinetic-loader {
+    margin: 40px auto 0;
+    width: 50px;
+    height: 50px;
+    border: 3px solid transparent;
+    border-top-color: #7df9ff;
+    border-radius: 50%;
+    animation: inicio-spin 1s infinite linear;
+}
+
+@keyframes inicio-spin {
+    to { transform: rotate(360deg); }
+}
+
+
+/* ============================================================
+   PRELOADER
+============================================================ */
+#inicio-page #preloader {
+    position: fixed;
+    top: 0; left: 0;
+
+    width: 100vw;
+    height: 100vh;
+    background: #0b0f19;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    z-index: 2000;
+
+    transition: opacity .6s ease-out, visibility .6s;
+}
+
+#inicio-page .loader-circle {
+    width: 75px;
+    height: 75px;
+    border-radius: 50%;
+
+    border: 3px solid transparent;
+    border-top-color: #00d0ff;
+    border-right-color: #bd00ff;
+
+    animation: inicio-appleSpin 1s linear infinite;
+
+    filter: drop-shadow(0 0 10px #00d0ff);
+}
+
+@keyframes inicio-appleSpin {
+    to { transform: rotate(360deg); }
+}
+
+#inicio-page #preloader.fade-out {
+    opacity: 0;
+    visibility: hidden;
+}
+
+
+/* ============================================================
+   PROMOCIONES — TARJETAS 3D
+============================================================ */
+#inicio-page .section-title {
+    text-align: center;
+    font-size: 2.4rem;
+    margin-bottom: 40px;
+}
+
+#inicio-page .sparkle {
+    animation: inicio-sparkleText 3s infinite;
+}
+
+@keyframes inicio-sparkleText {
+    0%, 100% { text-shadow: 0 0 5px #7df9ff; }
+    50% { text-shadow: 0 0 20px #bd00ff; }
+}
+
+#inicio-page .promo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 35px;
+}
+
+#inicio-page .futuristic-card {
+    padding: 25px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px);
+
+    transition: 0.4s ease;
+    transform-style: preserve-3d;
+}
+
+#inicio-page .futuristic-card.visible {
+    transform: translateY(0);
+}
+
+#inicio-page .futuristic-card:hover {
+    transform: translateY(-12px) rotateX(6deg) rotateY(-6deg);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+}
+
+
+/* ============================================================
+   NEWS – GLIDE REVEAL
+============================================================ */
+#inicio-page .news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+#inicio-page .news-item {
+    padding: 20px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 15px;
+
+    transform: translateX(-40px);
+    opacity: 0;
+
+    transition: 0.5s cubic-bezier(.15,.82,.35,1.11);
+}
+
+#inicio-page .news-item.visible {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+#inicio-page .neon-border {
+    border-bottom: 3px solid #00d0ff;
+    width: max-content;
+    margin: 0 auto 30px;
+    padding-bottom: 8px;
+    box-shadow: 0 0 15px #00d0ff;
+}
+
+
+/* ============================================================
+   DOCK – TECNOLOGÍAS
+============================================================ */
+#inicio-page .dock-menu {
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+    margin-top: 50px;
+}
+
+#inicio-page .dock-item img {
+    width: 80px;
+    transition: .25s;
+    filter: drop-shadow(0 0 10px #009dff);
+}
+
+#inicio-page .dock-item:hover img {
+    transform: scale(1.4);
+    filter: drop-shadow(0 0 20px #bd00ff);
+}
+
+
+/* ============================================================
+   RESPONSIVE DESIGN
+============================================================ */
+@media (max-width: 900px) {
+    #inicio-page .promo-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #inicio-page .nav-futuristic {
+        padding: 15px;
+    }
+
+    #inicio-page .glow-text {
+        font-size: 2rem;
+    }
+}
