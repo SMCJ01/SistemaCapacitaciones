@@ -1,0 +1,634 @@
+
+------------------------------------------------------------
+-- 1. VISTAS (mínimo 5, todas usan JOIN)
+------------------------------------------------------------
+
+-- 1) Detalle de cursos (nivel, plataforma, tipo, profesor)
+CREATE OR REPLACE VIEW vw_cursos_detalle AS
+SELECT 
+    c.IdCur,
+    c.TituloCur,
+    c.DescCur,
+    c.PrecioCur,
+    c.EstadoCur,
+    c.FechaCur,
+    n.NomNivel,
+    n.DifNivel,
+    pl.NomPlat,
+    pl.UrlPlat,
+    t.NomTipoCur,
+    u.NomUsu AS ProfesorNombre,
+    u.ApeUsu AS ProfesorApellido
+FROM Cursos c
+JOIN Niveles n     ON c.IdNivel = n.IdNivel
+JOIN Plataforma pl ON c.IdPlat = pl.IdPlat
+JOIN TipoCurso t   ON c.IdTipoCur = t.IdTipoCur
+JOIN Profesor pr   ON c.IdProf = pr.IdProf
+JOIN Usuario u     ON pr.IdUsu = u.IdUsu;
+
+-- 2) Inscripciones con datos del estudiante y curso
+CREATE OR REPLACE VIEW vw_inscripciones_detalle AS
+SELECT 
+    i.IdIns,
+    i.FechaIns,
+    i.EstadoIns,
+    u.IdUsu,
+    u.NomUsu,
+    u.ApeUsu,
+    u.EmailUsu,
+    c.IdCur,
+    c.TituloCur,
+    c.PrecioCur
+FROM Inscripcion i
+JOIN Usuario u ON i.IdUsu = u.IdUsu
+JOIN Cursos c  ON i.IdCur = c.IdCur;
+
+-- 3) Pagos con detalle, usuario y curso
+CREATE OR REPLACE VIEW vw_pagos_detalle AS
+SELECT 
+    p.IdPag,
+    p.MontoPag,
+    p.FechaPag,
+    p.MetodoPag,
+    p.EstadoPag,
+    dp.MontoDetPag,
+    dp.ItemsDetPag,
+    dp.RucDniCorreoDetPag,
+    i.IdIns,
+    u.IdUsu,
+    u.NomUsu,
+    u.ApeUsu,
+    c.IdCur,
+    c.TituloCur
+FROM Pago p
+JOIN DetallePago dp ON p.IdPag = dp.IdPag
+JOIN Inscripcion i  ON p.IdIns = i.IdIns
+JOIN Usuario u      ON i.IdUsu = u.IdUsu
+JOIN Cursos c       ON i.IdCur = c.IdCur;
+
+-- 4) Notas completas (nota global + detalle + estudiante + curso)
+CREATE OR REPLACE VIEW vw_notas_detalle AS
+SELECT 
+    n.IdNot,
+    n.CalifNot,
+    n.FechaCalifNot,
+    dn.IdDetNot,
+    dn.NomEval,
+    dn.TipoEval,
+    dn.CalifDetNot,
+    dn.FechaEval,
+    u.IdUsu,
+    u.NomUsu,
+    u.ApeUsu,
+    c.IdCur,
+    c.TituloCur
+FROM Notas n
+JOIN DetalleNotas dn ON dn.IdNot = n.IdNot
+JOIN Inscripcion i   ON n.IdIns = i.IdIns
+JOIN Usuario u       ON i.IdUsu = u.IdUsu
+JOIN Cursos c        ON i.IdCur = c.IdCur;
+
+-- 5) Cursos por profesor, con total de inscritos
+CREATE OR REPLACE VIEW vw_cursos_profesor AS
+SELECT 
+    c.IdCur,
+    c.TituloCur,
+    c.FechaCur,
+    c.EstadoCur,
+    c.PrecioCur,
+    pr.IdProf,
+    u.NomUsu AS ProfesorNombre,
+    u.ApeUsu AS ProfesorApellido,
+    (
+        SELECT COUNT(*) 
+        FROM Inscripcion i 
+        WHERE i.IdCur = c.IdCur
+    ) AS TotalInscritos
+FROM Cursos c
+JOIN Profesor pr ON c.IdProf = pr.IdProf
+JOIN Usuario u   ON pr.IdUsu = u.IdUsu;
+
+
+------------------------------------------------------------
+-- 2. PROCEDIMIENTOS almacenados (INSERT, UPDATE, DELETE)
+------------------------------------------------------------
+DELIMITER $$
+
+-- Insertar curso
+CREATE PROCEDURE sp_insert_curso (
+    IN p_titulo   VARCHAR(150),
+    IN p_desc     TEXT,
+    IN p_precio   DECIMAL(10,2),
+    IN p_estado   VARCHAR(50),
+    IN p_fecha    DATE,
+    IN p_idNivel  INT,
+    IN p_idProf   INT,
+    IN p_idPlat   INT,
+    IN p_idTipo   INT
+)
+BEGIN
+    INSERT INTO Cursos (
+        TituloCur, DescCur, PrecioCur, EstadoCur, FechaCur,
+        IdNivel, IdProf, IdPlat, IdTipoCur
+    ) VALUES (
+        p_titulo, p_desc, p_precio, p_estado, p_fecha,
+        p_idNivel, p_idProf, p_idPlat, p_idTipo
+    );
+END$$
+
+-- Actualizar curso
+CREATE PROCEDURE sp_update_curso (
+    IN p_idCur    INT,
+    IN p_titulo   VARCHAR(150),
+    IN p_desc     TEXT,
+    IN p_precio   DECIMAL(10,2),
+    IN p_estado   VARCHAR(50),
+    IN p_fecha    DATE
+)
+BEGIN
+    UPDATE Cursos
+    SET TituloCur = p_titulo,
+        DescCur   = p_desc,
+        PrecioCur = p_precio,
+        EstadoCur = p_estado,
+        FechaCur  = p_fecha
+    WHERE IdCur = p_idCur;
+END$$
+
+-- Eliminar curso
+CREATE PROCEDURE sp_delete_curso (
+    IN p_idCur INT
+)
+BEGIN
+    DELETE FROM Cursos
+    WHERE IdCur = p_idCur;
+END$$
+
+DELIMITER ;
+
+
+------------------------------------------------------------
+-- 3. PROCEDIMIENTOS SELECT (JOIN + mínimo 2 parámetros)
+------------------------------------------------------------
+DELIMITER $$
+
+-- 1) Buscar cursos por plataforma, tipo y texto
+CREATE PROCEDURE sp_buscar_cursos (
+    IN p_idPlat INT,
+    IN p_idTipo INT,
+    IN p_texto  VARCHAR(100)
+)
+BEGIN
+    SELECT c.*, pl.NomPlat, t.NomTipoCur, n.NomNivel
+    FROM Cursos c
+    JOIN Plataforma pl ON c.IdPlat = pl.IdPlat
+    JOIN TipoCurso t   ON c.IdTipoCur = t.IdTipoCur
+    JOIN Niveles n     ON c.IdNivel = n.IdNivel
+    WHERE (p_idPlat IS NULL OR c.IdPlat = p_idPlat)
+      AND (p_idTipo IS NULL OR c.IdTipoCur = p_idTipo)
+      AND (p_texto IS NULL 
+           OR c.TituloCur LIKE CONCAT('%', p_texto, '%')
+           OR c.DescCur   LIKE CONCAT('%', p_texto, '%'));
+END$$
+
+-- 2) Inscripciones de un usuario en un rango de fechas
+CREATE PROCEDURE sp_inscripciones_usuario (
+    IN p_idUsu    INT,
+    IN p_fechaIni DATE,
+    IN p_fechaFin DATE
+)
+BEGIN
+    SELECT i.*, c.TituloCur, c.PrecioCur
+    FROM Inscripcion i
+    JOIN Cursos c ON i.IdCur = c.IdCur
+    WHERE i.IdUsu = p_idUsu
+      AND i.FechaIns BETWEEN p_fechaIni AND p_fechaFin;
+END$$
+
+-- 3) Pagos filtrados por método, estado y rango de fechas
+CREATE PROCEDURE sp_pagos_filtrados (
+    IN p_metodo   VARCHAR(50),
+    IN p_estado   VARCHAR(50),
+    IN p_fechaIni DATE,
+    IN p_fechaFin DATE
+)
+BEGIN
+    SELECT p.*, u.NomUsu, u.ApeUsu, c.TituloCur
+    FROM Pago p
+    JOIN Inscripcion i ON p.IdIns = i.IdIns
+    JOIN Usuario u     ON i.IdUsu = u.IdUsu
+    JOIN Cursos c      ON i.IdCur = c.IdCur
+    WHERE (p_metodo IS NULL OR p.MetodoPag = p_metodo)
+      AND (p_estado IS NULL OR p.EstadoPag = p_estado)
+      AND p.FechaPag BETWEEN p_fechaIni AND p_fechaFin;
+END$$
+
+DELIMITER ;
+
+
+------------------------------------------------------------
+-- 4. FUNCIONES (≥3) con IF y CASE para mensajes
+------------------------------------------------------------
+DELIMITER $$
+
+-- Mensaje según estado de inscripción
+CREATE FUNCTION fn_mensaje_estado_inscripcion(p_estado VARCHAR(50))
+RETURNS VARCHAR(100)
+DETERMINISTIC
+BEGIN
+    DECLARE v_msg VARCHAR(100);
+
+    SET v_msg = CASE p_estado
+        WHEN 'ACTIVO'    THEN 'La inscripción está activa.'
+        WHEN 'PENDIENTE' THEN 'La inscripción está pendiente.'
+        WHEN 'ANULADO'   THEN 'La inscripción fue anulada.'
+        ELSE 'Estado de inscripción desconocido.'
+    END;
+
+    RETURN v_msg;
+END$$
+
+-- Mensaje según nota (0-20)
+CREATE FUNCTION fn_mensaje_nota(p_nota DECIMAL(5,2))
+RETURNS VARCHAR(100)
+DETERMINISTIC
+BEGIN
+    DECLARE v_msg VARCHAR(100);
+
+    IF p_nota IS NULL THEN
+        SET v_msg = 'Sin nota registrada.';
+    ELSEIF p_nota >= 14 THEN
+        SET v_msg = 'Aprobado.';
+    ELSEIF p_nota >= 10 THEN
+        SET v_msg = 'Regular. Puede mejorar.';
+    ELSE
+        SET v_msg = 'Desaprobado. Requiere refuerzo.';
+    END IF;
+
+    RETURN v_msg;
+END$$
+
+-- Mensaje según estado de pago
+CREATE FUNCTION fn_mensaje_estado_pago(p_estado VARCHAR(50))
+RETURNS VARCHAR(100)
+DETERMINISTIC
+BEGIN
+    DECLARE v_msg VARCHAR(100);
+
+    SET v_msg = CASE p_estado
+        WHEN 'PENDIENTE' THEN 'El pago está pendiente de confirmación.'
+        WHEN 'COMPLETADO' THEN 'Pago realizado correctamente.'
+        WHEN 'RECHAZADO' THEN 'El pago fue rechazado.'
+        ELSE 'Estado de pago no definido.'
+    END;
+
+    RETURN v_msg;
+END$$
+
+DELIMITER ;
+
+
+------------------------------------------------------------
+-- 5. TABLA DE AUDITORÍA + 4 TRIGGERS de control
+------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS Auditoria (
+    IdAud        INT AUTO_INCREMENT PRIMARY KEY,
+    Tabla        VARCHAR(50),
+    Accion       VARCHAR(20),
+    IdRegistro   INT,
+    Fecha        DATETIME DEFAULT NOW(),
+    UsuarioBD    VARCHAR(100),
+    Detalle      TEXT
+);
+
+DELIMITER $$
+
+-- AFTER INSERT en Usuario
+CREATE TRIGGER trg_usuario_ai
+AFTER INSERT ON Usuario
+FOR EACH ROW
+BEGIN
+  INSERT INTO Auditoria (Tabla, Accion, IdRegistro, UsuarioBD, Detalle)
+  VALUES ('Usuario', 'INSERT', NEW.IdUsu, CURRENT_USER(),
+          CONCAT('Nuevo usuario: ', NEW.NomUsu, ' ', NEW.ApeUsu, ' (', NEW.EmailUsu, ')'));
+END$$
+
+-- AFTER UPDATE en Usuario
+CREATE TRIGGER trg_usuario_au
+AFTER UPDATE ON Usuario
+FOR EACH ROW
+BEGIN
+  INSERT INTO Auditoria (Tabla, Accion, IdRegistro, UsuarioBD, Detalle)
+  VALUES ('Usuario', 'UPDATE', NEW.IdUsu, CURRENT_USER(),
+          CONCAT('Cambio de rol o datos del usuario ', NEW.EmailUsu));
+END$$
+
+-- AFTER INSERT en Inscripcion
+CREATE TRIGGER trg_inscripcion_ai
+AFTER INSERT ON Inscripcion
+FOR EACH ROW
+BEGIN
+  INSERT INTO Auditoria (Tabla, Accion, IdRegistro, UsuarioBD, Detalle)
+  VALUES ('Inscripcion', 'INSERT', NEW.IdIns, CURRENT_USER(),
+          CONCAT('Inscripción de usuario ', NEW.IdUsu, ' al curso ', NEW.IdCur));
+END$$
+
+-- AFTER INSERT en Pago
+CREATE TRIGGER trg_pago_ai
+AFTER INSERT ON Pago
+FOR EACH ROW
+BEGIN
+  INSERT INTO Auditoria (Tabla, Accion, IdRegistro, UsuarioBD, Detalle)
+  VALUES ('Pago', 'INSERT', NEW.IdPag, CURRENT_USER(),
+          CONCAT('Pago registrado para inscripción ', NEW.IdIns,
+                 ' por monto ', NEW.MontoPag));
+END$$
+
+DELIMITER ;
+
+
+------------------------------------------------------------
+-- 6. TRIGGERS con SIGNAL (≥5 validaciones)
+------------------------------------------------------------
+DELIMITER $$
+
+-- 1) Antes de insertar Usuario: email único (extra a UNIQUE)
+CREATE TRIGGER trg_usuario_bi_email
+BEFORE INSERT ON Usuario
+FOR EACH ROW
+BEGIN
+    IF EXISTS (SELECT 1 FROM Usuario WHERE EmailUsu = NEW.EmailUsu) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'El correo ya se encuentra registrado en el sistema.';
+    END IF;
+END$$
+
+-- 2) Antes de insertar Inscripcion: evitar duplicado (mismo usuario y curso)
+CREATE TRIGGER trg_inscripcion_bi_unica
+BEFORE INSERT ON Inscripcion
+FOR EACH ROW
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM Inscripcion 
+        WHERE IdUsu = NEW.IdUsu AND IdCur = NEW.IdCur
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'El usuario ya está inscrito en este curso.';
+    END IF;
+END$$
+
+-- 3) Antes de insertar Pago: monto > 0
+CREATE TRIGGER trg_pago_bi_monto
+BEFORE INSERT ON Pago
+FOR EACH ROW
+BEGIN
+    IF NEW.MontoPag <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'El monto del pago debe ser mayor que 0.';
+    END IF;
+END$$
+
+-- 4) Antes de insertar Nota: validar rango 0-20
+CREATE TRIGGER trg_notas_bi_rango
+BEFORE INSERT ON Notas
+FOR EACH ROW
+BEGIN
+    IF NEW.CalifNot < 0 OR NEW.CalifNot > 20 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'La calificación global debe estar entre 0 y 20.';
+    END IF;
+END$$
+
+-- 5) Antes de eliminar un curso: no permitir si tiene inscripciones o pagos
+CREATE TRIGGER trg_cursos_bd_relaciones
+BEFORE DELETE ON Cursos
+FOR EACH ROW
+BEGIN
+    IF EXISTS (
+        SELECT 1 
+        FROM Inscripcion i 
+        WHERE i.IdCur = OLD.IdCur
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'No se puede eliminar el curso: tiene inscripciones asociadas.';
+    ELSEIF EXISTS (
+        SELECT 1
+        FROM Pago p
+        JOIN Inscripcion i ON p.IdIns = i.IdIns
+        WHERE i.IdCur = OLD.IdCur
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'No se puede eliminar el curso: tiene pagos registrados.';
+    END IF;
+END$$
+
+DELIMITER ;
+
+
+------------------------------------------------------------
+-- 7. USUARIOS DE BD (Soporte, DBAs, Practicantes)
+--    Nombres con nombre + apellido
+------------------------------------------------------------
+
+-- NOTA: ajusta 'IDENTIFIED BY' con las contraseñas que quieras.
+-- Todos definidos en 'localhost' para entorno de desarrollo (Laragon).
+
+-- GRUPOS:
+--  * SOPORTE: solo SELECT y UPDATE (tablas distintas cada uno)
+--  * DBAs: dos con SELECT/INSERT/UPDATE/DELETE en tablas distintas,
+--          uno con acceso total + privilegios tipo ROOT
+--  * PRACTICANTES: solo SELECT en tablas distintas
+
+-- SO PORTE (3 usuarios)
+CREATE USER 'soporte_pedro_gomez'@'localhost' IDENTIFIED BY 'SoportePedro2025*';
+CREATE USER 'soporte_maria_fernandez'@'localhost' IDENTIFIED BY 'SoporteMaria2025*';
+CREATE USER 'soporte_luis_sanchez'@'localhost' IDENTIFIED BY 'SoporteLuis2025*';
+
+-- Soporte Pedro: Usuario / Estudiante / Profesor
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.Usuario   TO 'soporte_pedro_gomez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.Estudiante TO 'soporte_pedro_gomez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.Profesor   TO 'soporte_pedro_gomez'@'localhost';
+
+-- Soporte María: Cursos / Niveles / Plataforma / TipoCurso
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.Cursos     TO 'soporte_maria_fernandez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.Niveles    TO 'soporte_maria_fernandez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.Plataforma TO 'soporte_maria_fernandez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.TipoCurso  TO 'soporte_maria_fernandez'@'localhost';
+
+-- Soporte Luis: Inscripcion / Pago / DetallePago / Notas / DetalleNotas / PaqueteCursos / Horario / tablas puente
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.Inscripcion   TO 'soporte_luis_sanchez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.Pago          TO 'soporte_luis_sanchez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.DetallePago   TO 'soporte_luis_sanchez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.Notas         TO 'soporte_luis_sanchez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.DetalleNotas  TO 'soporte_luis_sanchez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.PaqueteCursos TO 'soporte_luis_sanchez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.Horario       TO 'soporte_luis_sanchez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.CursoPaquete  TO 'soporte_luis_sanchez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.CursoHorario  TO 'soporte_luis_sanchez'@'localhost';
+GRANT SELECT, UPDATE ON SistemaCapacitaciones.CursoProfesor TO 'soporte_luis_sanchez'@'localhost';
+
+
+-- DBAs (3 usuarios)
+CREATE USER 'dba_ana_ramirez'@'localhost'   IDENTIFIED BY 'DbaAna2025*';
+CREATE USER 'dba_jose_perez'@'localhost'    IDENTIFIED BY 'DbaJose2025*';
+CREATE USER 'dba_marta_lopez_root'@'localhost' IDENTIFIED BY 'DbaRootMarta2025*';
+
+-- DBA Ana: DML sobre tablas de configuración y cursos
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.Usuario       TO 'dba_ana_ramirez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.Estudiante    TO 'dba_ana_ramirez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.Profesor      TO 'dba_ana_ramirez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.Cursos        TO 'dba_ana_ramirez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.Plataforma    TO 'dba_ana_ramirez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.Niveles       TO 'dba_ana_ramirez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.TipoCurso     TO 'dba_ana_ramirez'@'localhost';
+
+-- DBA José: DML sobre inscripciones, pagos, notas, paquetes, horarios
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.Inscripcion   TO 'dba_jose_perez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.Pago          TO 'dba_jose_perez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.DetallePago   TO 'dba_jose_perez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.Notas         TO 'dba_jose_perez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.DetalleNotas  TO 'dba_jose_perez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.PaqueteCursos TO 'dba_jose_perez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.Horario       TO 'dba_jose_perez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.CursoPaquete  TO 'dba_jose_perez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.CursoHorario  TO 'dba_jose_perez'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE 
+  ON SistemaCapacitaciones.CursoProfesor TO 'dba_jose_perez'@'localhost';
+
+-- DBA Marta: acceso total (como root de la BD)
+GRANT ALL PRIVILEGES ON SistemaCapacitaciones.* TO 'dba_marta_lopez_root'@'localhost';
+
+-- Además, privilegios globales especiales (depende de versión MySQL, es para la rúbrica)
+GRANT CREATE USER, GRANT OPTION, TRIGGER, PROCESS, RELOAD
+  ON *.* TO 'dba_marta_lopez_root'@'localhost';
+
+
+-- PRACTICANTES (solo SELECT en distintas tablas)
+CREATE USER 'practicante_juan_rodriguez'@'localhost'   IDENTIFIED BY 'PracJuan2025*';
+CREATE USER 'practicante_laura_martin'@'localhost'     IDENTIFIED BY 'PracLaura2025*';
+CREATE USER 'practicante_carlos_ruiz'@'localhost'      IDENTIFIED BY 'PracCarlos2025*';
+
+-- Practicante Juan: usuarios
+GRANT SELECT ON SistemaCapacitaciones.Usuario   TO 'practicante_juan_rodriguez'@'localhost';
+GRANT SELECT ON SistemaCapacitaciones.Estudiante TO 'practicante_juan_rodriguez'@'localhost';
+GRANT SELECT ON SistemaCapacitaciones.Profesor   TO 'practicante_juan_rodriguez'@'localhost';
+
+-- Practicante Laura: cursos y catálogos
+GRANT SELECT ON SistemaCapacitaciones.Cursos     TO 'practicante_laura_martin'@'localhost';
+GRANT SELECT ON SistemaCapacitaciones.Niveles    TO 'practicante_laura_martin'@'localhost';
+GRANT SELECT ON SistemaCapacitaciones.Plataforma TO 'practicante_laura_martin'@'localhost';
+GRANT SELECT ON SistemaCapacitaciones.TipoCurso  TO 'practicante_laura_martin'@'localhost';
+
+-- Practicante Carlos: inscripciones, pagos, notas
+GRANT SELECT ON SistemaCapacitaciones.Inscripcion   TO 'practicante_carlos_ruiz'@'localhost';
+GRANT SELECT ON SistemaCapacitaciones.Pago          TO 'practicante_carlos_ruiz'@'localhost';
+GRANT SELECT ON SistemaCapacitaciones.DetallePago   TO 'practicante_carlos_ruiz'@'localhost';
+GRANT SELECT ON SistemaCapacitaciones.Notas         TO 'practicante_carlos_ruiz'@'localhost';
+GRANT SELECT ON SistemaCapacitaciones.DetalleNotas  TO 'practicante_carlos_ruiz'@'localhost';
+
+FLUSH PRIVILEGES;
+
+SHOW FUNCTION STATUS LIKE 'fn_mensaje_nota';
+DELIMITER $$
+
+DROP FUNCTION IF EXISTS fn_mensaje_nota $$
+
+CREATE FUNCTION fn_mensaje_nota(p_nota DECIMAL(5,2))
+RETURNS VARCHAR(100)
+DETERMINISTIC
+BEGIN
+    DECLARE v_msg VARCHAR(100);
+
+    IF p_nota IS NULL THEN
+        SET v_msg = 'Sin nota registrada.';
+    ELSEIF p_nota >= 14 THEN
+        SET v_msg = 'Aprobado.';
+    ELSEIF p_nota >= 10 THEN
+        SET v_msg = 'Regular. Puede mejorar.';
+    ELSE
+        SET v_msg = 'Desaprobado. Requiere refuerzo.';
+    END IF;
+
+    RETURN v_msg;
+END $$
+
+DELIMITER ;
+
+USE SistemaCapacitaciones;
+
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_buscar_cursos $$
+
+CREATE PROCEDURE sp_buscar_cursos (
+    IN p_idPlat INT,
+    IN p_idTipo INT,
+    IN p_texto  VARCHAR(100)
+)
+BEGIN
+    SELECT 
+        c.IdCur,
+        c.TituloCur,
+        c.DescCur,
+        c.PrecioCur,
+        c.EstadoCur,
+        c.FechaCur,
+        n.NomNivel,
+        pl.NomPlat,
+        t.NomTipoCur,
+        u.NomUsu  AS ProfesorNombre,
+        u.ApeUsu  AS ProfesorApellido
+    FROM Cursos c
+    JOIN Plataforma pl ON c.IdPlat = pl.IdPlat
+    JOIN TipoCurso t   ON c.IdTipoCur = t.IdTipoCur
+    JOIN Niveles n     ON c.IdNivel = n.IdNivel
+    JOIN Profesor pr   ON c.IdProf = pr.IdProf
+    JOIN Usuario  u    ON pr.IdUsu = u.IdUsu
+    WHERE (p_idPlat IS NULL OR c.IdPlat = p_idPlat)
+      AND (p_idTipo IS NULL OR c.IdTipoCur = p_idTipo)
+      AND (
+            p_texto IS NULL 
+         OR c.TituloCur LIKE CONCAT('%', p_texto, '%')
+         OR c.DescCur   LIKE CONCAT('%', p_texto, '%')
+      );
+END $$
+
+DELIMITER ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
